@@ -3,11 +3,16 @@
 import { incorrectCharacterIndex } from "@/lib/words";
 import { KeyboardEventHandler, useState } from "react";
 import { KeyboardLayout } from "./Keyboard";
-import { Typed } from "./Typed";
 import { mapKeyToChar } from "@/lib/key-to-char";
 
-const TIME_LIMIT = 60;
-const CHAR_WIDTH = 7.23;
+const FONT_SIZE = window
+  .getComputedStyle(document.documentElement)
+  .getPropertyValue("font-size")
+  .split("px")
+  .map(parseInt)[0];
+
+const TIME_LIMIT = 5;
+const CHAR_WIDTH = FONT_SIZE / 2;
 const START_WORD_INDEX = 10;
 
 type TyperProps = {
@@ -107,27 +112,32 @@ export function Typer({ words }: TyperProps) {
       return <></>;
     }
 
-    const elapsed = time.getTime() - startDate.getTime();
     const wordsPerSecond =
-      (targetWordIndex - START_WORD_INDEX) / (elapsed / 1000);
+      (targetWordIndex - START_WORD_INDEX) / getElapsedMilliseconds() / 1000;
 
     return (
-      <div className={`${stopped ? "text-2xl" : "text-slate-600"}`}>
+      <div className="text-slate-600">
         <p>{targetWordIndex - START_WORD_INDEX} words</p>
         <p>{(wordsPerSecond * 60).toFixed(0)} WPM</p>
-
-        {!stopped && <p>{(elapsed / 1000).toFixed(1)}s</p>}
 
         {stopped && (
           <button
             onClick={() => reset()}
-            className="text-xs text-red-500 hover:text-white"
+            className="text-xs my-4 text-red-500 hover:text-white"
           >
             Try again?
           </button>
         )}
       </div>
     );
+  };
+
+  const getElapsedMilliseconds = () => {
+    if (startDate === undefined) {
+      return 1;
+    }
+
+    return new Date().getTime() - startDate.getTime();
   };
 
   const getScrollX = () => {
@@ -199,6 +209,14 @@ export function Typer({ words }: TyperProps) {
     <div className="font-mono">
       {renderWords()}
 
+      <div className="flex justify-center mb-4 gap-4">
+        <KeyboardLayout highlight={typedRaw.slice(-1)} />
+
+        <p className="text-slate-500">
+          {(TIME_LIMIT - getElapsedMilliseconds() / 1000).toFixed(1)}ms
+        </p>
+      </div>
+
       <input
         autoFocus={true}
         placeholder={stopped ? "..." : "Start typing ..."}
@@ -209,12 +227,7 @@ export function Typer({ words }: TyperProps) {
         className="bg-black disabled:text-slate-500 text-white outline-none border-slate-800 border-2 w-full p-4"
       />
 
-      <div className="flex p-10 justify-between">
-        <KeyboardLayout highlight={typedRaw.slice(-1)} />
-        {renderStats()}
-      </div>
-
-      <Typed typedRaw={typedRaw} />
+      <div className="flex p-10 justify-between">{renderStats()}</div>
     </div>
   );
 }
