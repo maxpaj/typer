@@ -5,11 +5,14 @@ import { KeyboardEventHandler, useState } from "react";
 import { KeyboardLayout } from "./Keyboard";
 import { mapKeyToChar } from "@/lib/key-to-char";
 
-const FONT_SIZE = window
-  .getComputedStyle(document.documentElement)
-  .getPropertyValue("font-size")
-  .split("px")
-  .map(parseInt)[0];
+const FONT_SIZE =
+  window !== undefined
+    ? window
+        .getComputedStyle(document.documentElement)
+        .getPropertyValue("font-size")
+        .split("px")
+        .map(parseInt)[0]
+    : 10;
 
 const TIME_LIMIT = 5;
 const CHAR_WIDTH = FONT_SIZE / 2;
