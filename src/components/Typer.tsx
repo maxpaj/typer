@@ -216,7 +216,7 @@ export function Typer({ words }: TyperProps) {
         <KeyboardLayout highlight={typedRaw.slice(-1)} />
 
         <p className="text-slate-500">
-          {(TIME_LIMIT - getElapsedMilliseconds() / 1000).toFixed(1)}ms
+          {(TIME_LIMIT - getElapsedMilliseconds() / 1000).toFixed(1)}s
         </p>
       </div>
 
