@@ -6,7 +6,7 @@ import { KeyboardLayout } from "./Keyboard";
 import { mapKeyToChar } from "@/lib/key-to-char";
 
 const FONT_SIZE =
-  window !== undefined
+  typeof window !== "undefined"
     ? window
         .getComputedStyle(document.documentElement)
         .getPropertyValue("font-size")
