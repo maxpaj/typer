@@ -17,6 +17,7 @@
 }
 
 body {
+  font-size: 12px;
   color: rgb(var(--foreground-rgb));
   background: linear-gradient(
       to bottom,
@@ -24,4 +25,28 @@ body {
       rgb(var(--background-end-rgb))
     )
     rgb(var(--background-start-rgb));
+}
+
+* {
+  transition: color 0.3s, border 0.8s;
+}
+
+.highlight {
+  animation: 5s highlight cubic-bezier(0.075, 0.82, 0.165, 1) forwards;
+}
+
+.words {
+  background: linear-gradient(to right, black, white, black);
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+@keyframes highlight {
+  0% {
+    border-color: red;
+  }
+
+  100% {
+    border-color: white;
+  }
 }
