@@ -11,7 +11,7 @@ export function KeyboardLayout({ highlight }: KeyboardLayoutProps) {
           onAnimationEnd={() => {
             console.log("ended");
           }}
-          className="me-2 border px-1 rounded-sm highlight"
+          className="border px-1 rounded-sm highlight"
         >
           {char.toUpperCase()}
         </span>
@@ -21,7 +21,7 @@ export function KeyboardLayout({ highlight }: KeyboardLayoutProps) {
     return (
       <span
         key={char}
-        className="me-2 border border-transparent px-1 rounded-sm text-slate-500"
+        className="border border-transparent px-1 rounded-sm text-slate-500"
       >
         {char.toUpperCase()}
       </span>
@@ -30,26 +30,26 @@ export function KeyboardLayout({ highlight }: KeyboardLayoutProps) {
 
   return (
     <div className="text-sm">
-      <div>
+      <div className="flex gap-2">
         {["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"].map((char) =>
           renderKeyboardCharacter(char, highlight)
         )}
       </div>
-      <div className="mx-2 my-2">
+      <div className="mx-2 my-2 flex gap-2">
         {["a", "s", "d", "f", "g", "h", "j", "k", "l"].map((char) =>
           renderKeyboardCharacter(char, highlight)
         )}
       </div>
-      <div className="mx-6 my-2">
+      <div className="mx-6 my-2 flex gap-2">
         {["z", "x", "c", "v", "b", "n", "m"].map((char) =>
           renderKeyboardCharacter(char, highlight)
         )}
       </div>
 
       {highlight === "␣" ? (
-        <span className="mx-20 px-10 border border-red-500"></span>
+        <div className="mx-auto px-10 border border-red-500 w-1/2 h-4"></div>
       ) : (
-        <span className="mx-20 px-10 border border-slate-500"></span>
+        <div className="mx-auto px-10 border border-slate-500 w-1/2 h-4"></div>
       )}
     </div>
   );

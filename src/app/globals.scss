@@ -36,9 +36,25 @@ body {
 }
 
 .words {
-  background: linear-gradient(to right, black, white, black);
+  background: linear-gradient(to right, black 25%, white 50%, black 75%);
   background-clip: text;
   -webkit-text-fill-color: transparent;
+
+  display: flex;
+  justify-content: space-between;
+
+  div {
+    &:first-child,
+    &:last-child {
+      display: flex;
+      flex-grow: 1;
+      flex-basis: 0;
+    }
+
+    &:first-child {
+      justify-content: right;
+    }
+  }
 }
 
 @keyframes highlight {

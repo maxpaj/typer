@@ -17,6 +17,8 @@ const FONT_SIZE =
 const TIME_LIMIT = 60;
 const CHAR_WIDTH = FONT_SIZE / 2;
 const START_WORD_INDEX = 10;
+const WORDS_AHEAD = 5;
+const WORDS_BEHIND = 5;
 
 type TyperProps = {
   words: string[];
@@ -155,7 +157,7 @@ export function Typer({ words }: TyperProps) {
 
   const renderWord = (word: string, current: boolean = false) => {
     return current ? (
-      <span className="me-2" key={word}>
+      <span key={word}>
         {word.split("").map((char, index) => {
           const isCorrectChar =
             incorrectCharIndex > index || incorrectCharIndex == -1;
@@ -178,7 +180,7 @@ export function Typer({ words }: TyperProps) {
         })}
       </span>
     ) : (
-      <span key={word} className="me-2 text-slate-400">
+      <span key={word} className="text-slate-400">
         {word}
       </span>
     );
@@ -188,20 +190,20 @@ export function Typer({ words }: TyperProps) {
     const _ = getScrollX();
 
     return (
-      <div className="overflow-hidden mb-5 words text-white flex justify-center">
-        <div>
+      <div className="mb-5 words">
+        <div className="gap-2">
           {words
-            .slice(targetWordIndex - 10, targetWordIndex)
+            .slice(targetWordIndex - WORDS_BEHIND, targetWordIndex)
             .map((w) => renderWord(w, false))}
         </div>
-        <div>
+        <div className="mx-2">
           {words
             .slice(targetWordIndex, targetWordIndex + 1)
             .map((w) => renderWord(w, true))}
         </div>
-        <div>
+        <div className="gap-2">
           {words
-            .slice(targetWordIndex + 1, targetWordIndex + 10)
+            .slice(targetWordIndex + 1, targetWordIndex + WORDS_AHEAD + 1)
             .map((w) => renderWord(w, false))}
         </div>
       </div>
@@ -212,10 +214,12 @@ export function Typer({ words }: TyperProps) {
     <div className="font-mono">
       {renderWords()}
 
-      <div className="flex justify-center mb-4 gap-4">
+      <div className="flex justify-between mb-4 gap-4">
+        <p className="basis-0 flex-grow"></p>
+
         <KeyboardLayout highlight={typedRaw.slice(-1)} />
 
-        <p className="text-slate-500">
+        <p className="basis-0 flex-grow text-slate-500">
           {(TIME_LIMIT - getElapsedMilliseconds() / 1000).toFixed(1)}s
         </p>
       </div>
