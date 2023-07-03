@@ -31,10 +31,6 @@ body {
   transition: color 0.3s, border 0.8s;
 }
 
-.highlight {
-  animation: 5s highlight cubic-bezier(0.075, 0.82, 0.165, 1) forwards;
-}
-
 .words {
   background: linear-gradient(to right, black 25%, white 50%, black 75%);
   background-clip: text;
@@ -57,8 +53,16 @@ body {
   }
 }
 
+.highlight {
+  animation: 1s highlight cubic-bezier(0.075, 0.82, 0.165, 1) forwards;
+}
+
 @keyframes highlight {
   0% {
+    border-color: red;
+  }
+
+  90% {
     border-color: red;
   }
 

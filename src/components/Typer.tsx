@@ -1,6 +1,6 @@
 "use client";
 
-import { incorrectCharacterIndex } from "@/lib/words";
+import { incorrectCharacterIndex, lastCorrectIndex } from "@/lib/words";
 import { KeyboardEventHandler, useState } from "react";
 import { KeyboardLayout } from "./Keyboard";
 import { mapKeyToChar } from "@/lib/key-to-char";
@@ -17,8 +17,10 @@ const FONT_SIZE =
 const TIME_LIMIT = 60;
 const CHAR_WIDTH = FONT_SIZE / 2;
 const START_WORD_INDEX = 10;
-const WORDS_AHEAD = 5;
-const WORDS_BEHIND = 5;
+
+const WORDS = 7;
+const WORDS_AHEAD = WORDS;
+const WORDS_BEHIND = WORDS;
 
 type TyperProps = {
   words: string[];
@@ -31,6 +33,8 @@ export function Typer({ words }: TyperProps) {
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [time, setTime] = useState(new Date());
   const [stopped, setStopped] = useState(false);
+  const [errors, setErrors] = useState(0);
+  const [correctWords, setCorrectWords] = useState(0);
 
   const targetWord = words[targetWordIndex];
   const incorrectCharIndex = incorrectCharacterIndex(typedWord, targetWord);
@@ -39,7 +43,13 @@ export function Typer({ words }: TyperProps) {
     const char = mapKeyToChar(e.key);
     setTypedRaw(() => typedRaw + char);
 
-    const correctSpelled = incorrectCharIndex === -1;
+    const correctWord = incorrectCharIndex === -1;
+    const correctChar =
+      lastCorrectIndex(typedWord + char, targetWord) === typedWord.length;
+
+    if (char !== "⌫" && !correctChar) {
+      setErrors(() => errors + 1);
+    }
 
     switch (e.key) {
       case "Meta":
@@ -49,9 +59,10 @@ export function Typer({ words }: TyperProps) {
       case "ArrowUp":
       case "Shift":
       case " ":
-        if (correctSpelled) {
+        if (correctWord) {
           setTargetWordIndex(() => targetWordIndex + 1);
           setTypedWord("");
+          setCorrectWords(() => correctWords + 1);
         }
         return;
     }
@@ -117,13 +128,13 @@ export function Typer({ words }: TyperProps) {
       return <></>;
     }
 
-    const wordsPerSecond =
-      (targetWordIndex - START_WORD_INDEX) / getElapsedMilliseconds() / 1000;
+    const wordsPerSecond = (1000 * correctWords) / getElapsedMilliseconds();
 
     return (
       <div className="text-slate-600">
-        <p>{targetWordIndex - START_WORD_INDEX} words</p>
+        <p>{correctWords} words</p>
         <p>{(wordsPerSecond * 60).toFixed(0)} WPM</p>
+        <p>{errors.toFixed(0)} errors</p>
 
         {stopped && (
           <button
@@ -155,24 +166,56 @@ export function Typer({ words }: TyperProps) {
     return scrollX;
   };
 
-  const renderWord = (word: string, current: boolean = false) => {
+  const renderWord = (
+    word: string,
+    wordIndex: number,
+    current: boolean = false
+  ) => {
     return current ? (
       <span key={word}>
         {word.split("").map((char, index) => {
           const isCorrectChar =
             incorrectCharIndex > index || incorrectCharIndex == -1;
+          const isTooLong = typedWord.length > word.length;
+          const isTyped = typedWord.length > index;
 
-          return isCorrectChar ? (
+          if (isTooLong) {
+            return (
+              <span
+                key={word + char + index + index * wordIndex}
+                className="font-bold [text-shadow:_0px_1px_2px_rgb(0_0_255_/_50%)]"
+              >
+                {char}
+              </span>
+            );
+          }
+
+          if (isTyped && isCorrectChar) {
+            return (
+              <span
+                key={word + char + index + index * wordIndex}
+                className="font-bold [text-shadow:_0px_1px_2px_rgb(0_255_0_/_90%)]"
+              >
+                {char}
+              </span>
+            );
+          }
+
+          if (isTyped && !isCorrectChar) {
+            return (
+              <span
+                key={word + char + index + index * wordIndex}
+                className="font-bold [text-shadow:_0px_1px_2px_rgb(255_0_0_/_90%)]"
+              >
+                {char}
+              </span>
+            );
+          }
+
+          return (
             <span
-              key={char + index}
-              className="text-green-400 [text-shadow:_0px_1px_2px_rgb(0_255_0_/_90%)]"
-            >
-              {char}
-            </span>
-          ) : (
-            <span
-              key={char + index}
-              className="text-red-500 [text-shadow:_0px_1px_2px_rgb(255_0_0_/_90%)]"
+              key={word + char + index + index * wordIndex}
+              className="font-bold"
             >
               {char}
             </span>
@@ -180,7 +223,7 @@ export function Typer({ words }: TyperProps) {
         })}
       </span>
     ) : (
-      <span key={word} className="text-slate-400">
+      <span key={word + wordIndex} className="font-thin text-slate-600">
         {word}
       </span>
     );
@@ -194,17 +237,17 @@ export function Typer({ words }: TyperProps) {
         <div className="gap-2">
           {words
             .slice(targetWordIndex - WORDS_BEHIND, targetWordIndex)
-            .map((w) => renderWord(w, false))}
+            .map((w, index) => renderWord(w, index, false))}
         </div>
         <div className="mx-2">
           {words
             .slice(targetWordIndex, targetWordIndex + 1)
-            .map((w) => renderWord(w, true))}
+            .map((w, index) => renderWord(w, index, true))}
         </div>
         <div className="gap-2">
           {words
             .slice(targetWordIndex + 1, targetWordIndex + WORDS_AHEAD + 1)
-            .map((w) => renderWord(w, false))}
+            .map((w, index) => renderWord(w, index, false))}
         </div>
       </div>
     );
@@ -219,7 +262,7 @@ export function Typer({ words }: TyperProps) {
 
         <KeyboardLayout highlight={typedRaw.slice(-1)} />
 
-        <p className="basis-0 flex-grow text-slate-500">
+        <p className="basis-0 flex-grow text-slate-500 border border-transparent text-sm">
           {(TIME_LIMIT - getElapsedMilliseconds() / 1000).toFixed(1)}s
         </p>
       </div>

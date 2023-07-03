@@ -3,17 +3,23 @@ type KeyboardLayoutProps = {
 };
 
 export function KeyboardLayout({ highlight }: KeyboardLayoutProps) {
-  const renderKeyboardCharacter = (char: string, highlight: string) => {
-    if (highlight === char) {
+  const renderKeyboardCharacter = (
+    char: string,
+    highlight: string,
+    renderAs: string = char
+  ) => {
+    const isHighlighted = highlight === char;
+
+    if (isHighlighted) {
       return (
         <span
           key={char}
           onAnimationEnd={() => {
-            console.log("ended");
+            console.log("animation ended");
           }}
           className="border px-1 rounded-sm highlight"
         >
-          {char.toUpperCase()}
+          {(renderAs || char).toUpperCase()}
         </span>
       );
     }
@@ -21,9 +27,9 @@ export function KeyboardLayout({ highlight }: KeyboardLayoutProps) {
     return (
       <span
         key={char}
-        className="border border-transparent px-1 rounded-sm text-slate-500"
+        className="border px-1 rounded-sm border-transparent text-slate-500"
       >
-        {char.toUpperCase()}
+        {(renderAs || char).toUpperCase()}
       </span>
     );
   };
@@ -34,6 +40,8 @@ export function KeyboardLayout({ highlight }: KeyboardLayoutProps) {
         {["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"].map((char) =>
           renderKeyboardCharacter(char, highlight)
         )}
+
+        {renderKeyboardCharacter("⌫", highlight, "←")}
       </div>
       <div className="mx-2 my-2 flex gap-2">
         {["a", "s", "d", "f", "g", "h", "j", "k", "l"].map((char) =>

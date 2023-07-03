@@ -17,7 +17,9 @@ export default async function Home() {
 
   return (
     <main className="min-h-screen">
-      <div className="p-4 font-mono text-md">Typer</div>
+      <div className="p-4 font-semibold font-mono text-md [text-shadow:_0px_1px_2px_rgb(255_0_0_/_90%)]">
+        Typer
+      </div>
 
       <div className="flex flex-col items-center">
         <div className="container mt-20">

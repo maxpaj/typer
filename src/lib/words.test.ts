@@ -1,7 +1,7 @@
-import { incorrectCharacterIndex } from "./words";
+import { incorrectCharacterIndex, lastCorrectIndex } from "./words";
 import { describe, expect, test } from "@jest/globals";
 
-describe("words", () => {
+describe("incorrectCharacterIndex", () => {
   test("when the input and target are not equal, it should return the index of the first occurrence of mismatch", () => {
     const first = "hem";
     const second = "hej";
@@ -54,5 +54,25 @@ describe("words", () => {
     const first = "";
     const second = "hej";
     expect(incorrectCharacterIndex(first, second)).toBe(0);
+  });
+});
+
+describe("lastCorrectIndex", () => {
+  test("returns the position of the last correct character when matching two strings", () => {
+    const first = "hem";
+    const second = "hej";
+    expect(lastCorrectIndex(first, second)).toBe(1);
+  });
+
+  test("returns zero when two string do not match at all", () => {
+    const first = "aem";
+    const second = "hej";
+    expect(lastCorrectIndex(first, second)).toBe(-1);
+  });
+
+  test("returns the last position of the string if the two strings match", () => {
+    const first = "hej";
+    const second = "hej";
+    expect(lastCorrectIndex(first, second)).toBe(2);
   });
 });
