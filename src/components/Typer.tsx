@@ -15,7 +15,7 @@ const FONT_SIZE =
         .map(parseInt)[0]
     : 10;
 
-const TIME_LIMIT = 10;
+const TIME_LIMIT = 60;
 const CHAR_WIDTH = FONT_SIZE / 2;
 const START_WORD_INDEX = 10;
 const WORDS = 7;
