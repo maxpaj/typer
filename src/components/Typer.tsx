@@ -163,6 +163,7 @@ export function Typer({ words }: TyperProps) {
     debug("Start");
     const start = new Date();
     setStartDate(() => start);
+    setWordTimer(() => new Date());
 
     dispatch({ action: "RUNNING" });
 
@@ -198,22 +199,44 @@ export function Typer({ words }: TyperProps) {
     setTypedWord(e.target.value);
   }
 
-  function renderStats() {
-    if (!startDate) {
-      return <></>;
-    }
-
-    const wordsPerSecond =
-      (1000 * correctWords.length) / getElapsedMilliseconds();
+  function renderRun(run: Run, index: number) {
+    const correctWordsTotalLength = run.correctWords.reduce(
+      (sum, c) => c.word.length + sum,
+      0
+    );
 
     return (
-      <div className="text-slate-600">
-        <p>{correctWords.length} words</p>
-        <p>{(wordsPerSecond * 60).toFixed(0)} WPM</p>
-        <p>{errors.toFixed(0)} errors</p>
-        <p className="mt-4">
-          {correctWords.map((c) => `${c.word} (${c.timeMillis}ms)`).join(", ")}
-        </p>
+      <div
+        key={run.startDate.toString()}
+        className={`mt-8 flex gap-x-4 ${
+          index === 0 && state.runningState === "STOPPED"
+            ? "text-white"
+            : "text-slate-600"
+        }`}
+      >
+        <div className="w-1/4">
+          <p>{TIME_LIMIT}s</p>
+          <p>{run.correctWords.length} words</p>
+          <p>{((run.correctWords.length / TIME_LIMIT) * 60).toFixed(0)} WPM</p>
+
+          <p className="mt-2">{correctWordsTotalLength} chars</p>
+          <p>{run.errors.toFixed(0)} errors</p>
+          <p>
+            {(
+              (100 * correctWordsTotalLength) /
+              (correctWordsTotalLength + run.errors)
+            ).toFixed(0)}
+            % accuracy
+          </p>
+        </div>
+
+        <div className="w-3/4 text-slate-600 flex flex-wrap content-baseline gap-x-1">
+          {run.correctWords.map((c) => (
+            <div style={{ flex: "0 0 160px" }} key={c.word + c.timeMillis}>
+              {c.word} ({c.timeMillis}ms)
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -221,46 +244,7 @@ export function Typer({ words }: TyperProps) {
   function renderHistory() {
     return state.history
       .sort((a, b) => b.startDate.getTime() - a.startDate.getTime())
-      .map((r, index) => {
-        const correctWordsTotalLength = r.correctWords.reduce(
-          (sum, c) => c.word.length + sum,
-          0
-        );
-
-        return (
-          <div
-            key={r.startDate.toString()}
-            className={`mt-8 flex gap-x-4 ${
-              index === 0 && state.runningState === "STOPPED"
-                ? "text-white"
-                : "text-slate-600"
-            }`}
-          >
-            <div className="w-1/4">
-              <p>{(r.correctWords.length / TIME_LIMIT).toFixed(0)} WPM</p>
-              <p>{r.correctWords.length} words</p>
-
-              <p className="mt-2">{correctWordsTotalLength} chars</p>
-              <p>{r.errors.toFixed(0)} errors</p>
-              <p>
-                {(
-                  (100 * correctWordsTotalLength) /
-                  (correctWordsTotalLength + r.errors)
-                ).toFixed(0)}
-                % accuracy
-              </p>
-            </div>
-
-            <div className="w-3/4 text-slate-600 flex flex-wrap content-baseline gap-x-1">
-              {r.correctWords.map((c) => (
-                <div style={{ flex: "0 0 160px" }} key={c.word + c.timeMillis}>
-                  {c.word} ({c.timeMillis}ms)
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-      });
+      .map(renderRun);
   }
 
   function getElapsedMilliseconds() {
