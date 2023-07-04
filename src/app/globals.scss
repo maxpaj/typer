@@ -90,3 +90,17 @@ body {
     border-color: white;
   }
 }
+
+.fade-out {
+  animation: 3s fade cubic-bezier(0.95, 0.05, 0.95, 0.05) forwards;
+}
+
+@keyframes fade {
+  0% {
+    color: rgb(var(--foreground-rgb) / 1);
+  }
+
+  100% {
+    color: rgb(var(--foreground-rgb) / 0);
+  }
+}
