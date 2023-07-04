@@ -1,9 +1,10 @@
 "use client";
 
 import { incorrectCharacterIndex, lastCorrectIndex } from "@/lib/words";
-import { KeyboardEventHandler, useState } from "react";
+import { KeyboardEvent, useReducer, useState } from "react";
 import { KeyboardLayout } from "./Keyboard";
-import { mapKeyToChar } from "@/lib/key-to-char";
+import { BACKSPACE, mapKeyToChar } from "@/lib/key-to-char";
+import { sleepStep } from "@/lib/sleep";
 
 const FONT_SIZE =
   typeof window !== "undefined"
@@ -14,10 +15,9 @@ const FONT_SIZE =
         .map(parseInt)[0]
     : 10;
 
-const TIME_LIMIT = 60;
+const TIME_LIMIT = 10;
 const CHAR_WIDTH = FONT_SIZE / 2;
 const START_WORD_INDEX = 10;
-
 const WORDS = 7;
 const WORDS_AHEAD = WORDS;
 const WORDS_BEHIND = WORDS;
@@ -26,28 +26,103 @@ type TyperProps = {
   words: string[];
 };
 
+type RunningState = "RESET" | "RUNNING" | "STOPPED";
+
+type ReducerState = {
+  runningState: RunningState;
+  history: Run[];
+};
+
+type ReducerAction = { action: RunningState };
+
+type CompletedWord = {
+  word: string;
+  timeMillis: number;
+};
+
+type Run = {
+  startDate: Date;
+  errors: number;
+  correctWords: CompletedWord[];
+};
+
 export function Typer({ words }: TyperProps) {
   const [typedRaw, setTypedRaw] = useState("");
   const [typedWord, setTypedWord] = useState("");
   const [targetWordIndex, setTargetWordIndex] = useState(START_WORD_INDEX);
+  const [timeStep, setStepTime] = useState(new Date());
+  const [wordTime, setWordTimer] = useState(new Date());
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
-  const [time, setTime] = useState(new Date());
-  const [stopped, setStopped] = useState(false);
   const [errors, setErrors] = useState(0);
-  const [correctWords, setCorrectWords] = useState(0);
+  const [correctWords, setCorrectWords] = useState<CompletedWord[]>([]);
+
+  const initialState: ReducerState = {
+    runningState: "RESET",
+    history: [],
+  };
+
+  const [state, dispatch] = useReducer(reducer, initialState);
 
   const targetWord = words[targetWordIndex];
   const incorrectCharIndex = incorrectCharacterIndex(typedWord, targetWord);
 
-  const keyDownListener: KeyboardEventHandler = (e) => {
+  function reducer(
+    prevState: ReducerState,
+    action: ReducerAction
+  ): ReducerState {
+    switch (action.action) {
+      case "RESET":
+        debug("RESET");
+
+        return {
+          history: prevState.history,
+          runningState: "RESET",
+        };
+      case "RUNNING":
+        debug("RUNNING");
+        return {
+          history: prevState.history,
+          runningState: "RUNNING",
+        };
+
+      case "STOPPED":
+        debug("STOPPED");
+        return {
+          runningState: "STOPPED",
+          history: [
+            ...prevState.history,
+            {
+              correctWords,
+              errors,
+              startDate: startDate!,
+            },
+          ],
+        };
+    }
+  }
+
+  function reset() {
+    dispatch({ action: "RESET" });
+    setTypedWord(() => "");
+    setCorrectWords([]);
+    setErrors(0);
+    setStartDate(undefined);
+  }
+
+  function keyDownListener(e: KeyboardEvent<HTMLInputElement>) {
     const char = mapKeyToChar(e.key);
+
+    if (char === "") {
+      return;
+    }
+
     setTypedRaw(() => typedRaw + char);
 
     const correctWord = incorrectCharIndex === -1;
     const correctChar =
       lastCorrectIndex(typedWord + char, targetWord) === typedWord.length;
 
-    if (char !== "⌫" && !correctChar) {
+    if (char !== BACKSPACE && !correctChar) {
       setErrors(() => errors + 1);
     }
 
@@ -62,101 +137,145 @@ export function Typer({ words }: TyperProps) {
         if (correctWord) {
           setTargetWordIndex(() => targetWordIndex + 1);
           setTypedWord("");
-          setCorrectWords(() => correctWords + 1);
+          setWordTimer(() => new Date());
+          setCorrectWords(() => [
+            ...correctWords,
+            {
+              word: targetWord,
+              timeMillis: new Date().getTime() - wordTime!.getTime(),
+            },
+          ]);
         }
         return;
     }
-  };
+  }
 
-  const shouldClear = (e: React.ChangeEvent<HTMLInputElement>) => {
+  function isStopped() {
+    return state.runningState === "STOPPED";
+  }
+
+  function shouldClearInput(e: React.ChangeEvent<HTMLInputElement>) {
     const key = (e.nativeEvent as unknown as any).data;
     return key !== null && key === " ";
-  };
+  }
 
-  const reset = () => {
-    setStopped(false);
-    setTypedRaw("");
-    setTypedWord("");
-    setStartDate(undefined);
-  };
-
-  const startTimer = () => {
+  async function startTimer() {
+    debug("Start");
     const start = new Date();
-
     setStartDate(() => start);
 
-    const interval = setInterval(() => {
-      const step = new Date();
-      setTime(() => step);
+    dispatch({ action: "RUNNING" });
 
-      if (!start) {
-        return;
-      }
+    await sleepStep(TIME_LIMIT * 1000, 500, () => {
+      setStepTime(() => new Date());
+    });
 
-      const elapsed = step.getTime() - start.getTime();
-      if (elapsed / 1000 < TIME_LIMIT) {
-        return;
-      }
+    dispatch({ action: "STOPPED" });
+  }
 
-      clearInterval(interval);
-      stopTimer();
-    }, 45);
+  function debug(state: string) {
+    console.log(state, {
+      correctWords,
+      errors,
+      startDate,
+      time: timeStep,
+    });
+  }
 
-    return () => {
-      clearInterval(interval);
-    };
-  };
+  function shouldStart() {
+    return startDate === undefined;
+  }
 
-  const stopTimer = () => {
-    setStopped(true);
-  };
-
-  const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (shouldClear(e)) {
+  function onChange(e: React.ChangeEvent<HTMLInputElement>) {
+    if (shouldClearInput(e)) {
       return;
     }
 
-    if (!startDate) {
+    if (shouldStart()) {
       startTimer();
     }
 
     setTypedWord(e.target.value);
-  };
+  }
 
-  const renderStats = () => {
+  function renderStats() {
     if (!startDate) {
       return <></>;
     }
 
-    const wordsPerSecond = (1000 * correctWords) / getElapsedMilliseconds();
+    const wordsPerSecond =
+      (1000 * correctWords.length) / getElapsedMilliseconds();
 
     return (
       <div className="text-slate-600">
-        <p>{correctWords} words</p>
+        <p>{correctWords.length} words</p>
         <p>{(wordsPerSecond * 60).toFixed(0)} WPM</p>
         <p>{errors.toFixed(0)} errors</p>
-
-        {stopped && (
-          <button
-            onClick={() => reset()}
-            className="text-xs my-4 text-red-500 hover:text-white"
-          >
-            Try again?
-          </button>
-        )}
+        <p className="mt-4">
+          {correctWords.map((c) => `${c.word} (${c.timeMillis}ms)`).join(", ")}
+        </p>
       </div>
     );
-  };
+  }
 
-  const getElapsedMilliseconds = () => {
-    if (startDate === undefined) {
-      return 1;
+  function renderHistory() {
+    return state.history
+      .sort((a, b) => b.startDate.getTime() - a.startDate.getTime())
+      .map((r, index) => {
+        const correctWordsTotalLength = r.correctWords.reduce(
+          (sum, c) => c.word.length + sum,
+          0
+        );
+
+        return (
+          <div
+            key={r.startDate.toString()}
+            className={`mt-8 flex gap-x-4 ${
+              index === 0 && state.runningState === "STOPPED"
+                ? "text-white"
+                : "text-slate-600"
+            }`}
+          >
+            <div className="w-1/4">
+              <p>{(r.correctWords.length / TIME_LIMIT).toFixed(0)} WPM</p>
+              <p>{r.correctWords.length} words</p>
+
+              <p className="mt-2">{correctWordsTotalLength} chars</p>
+              <p>{r.errors.toFixed(0)} errors</p>
+              <p>
+                {(
+                  (100 * correctWordsTotalLength) /
+                  (correctWordsTotalLength + r.errors)
+                ).toFixed(0)}
+                % accuracy
+              </p>
+            </div>
+
+            <div className="w-3/4 text-slate-600 flex flex-wrap content-baseline gap-x-1">
+              {r.correctWords.map((c) => (
+                <div style={{ flex: "0 0 160px" }} key={c.word + c.timeMillis}>
+                  {c.word} ({c.timeMillis}ms)
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      });
+  }
+
+  function getElapsedMilliseconds() {
+    if (state.runningState === "STOPPED" || state.runningState === "RESET") {
+      return TIME_LIMIT * 1000;
+    }
+
+    if (!startDate) {
+      return TIME_LIMIT * 1000;
     }
 
     return new Date().getTime() - startDate.getTime();
-  };
+  }
 
-  const getScrollX = () => {
+  function getScrollX() {
     const characters = words.slice(0, targetWordIndex).reduce((sum, curr) => {
       return sum + curr.length;
     }, 0);
@@ -164,13 +283,13 @@ export function Typer({ words }: TyperProps) {
     const spacesWidth = targetWordIndex * CHAR_WIDTH;
     const scrollX = -1 * (textWidth + spacesWidth);
     return scrollX;
-  };
+  }
 
-  const renderWord = (
+  function renderWord(
     word: string,
     wordIndex: number,
     current: boolean = false
-  ) => {
+  ) {
     return current ? (
       <span key={word}>
         {word.split("").map((char, index) => {
@@ -227,14 +346,23 @@ export function Typer({ words }: TyperProps) {
         {word}
       </span>
     );
-  };
+  }
 
-  const renderWords = () => {
+  function renderDebug() {
+    return (
+      <div>
+        <p>{state.runningState}</p>
+        <p>{state.history.length} runs</p>
+      </div>
+    );
+  }
+
+  function renderWords() {
     const _ = getScrollX();
 
     return (
       <div className="mb-5 words">
-        <div className="gap-2">
+        <div className="gap-2 w-1/2 overflow-hidden">
           {words
             .slice(targetWordIndex - WORDS_BEHIND, targetWordIndex)
             .map((w, index) => renderWord(w, index, false))}
@@ -244,14 +372,14 @@ export function Typer({ words }: TyperProps) {
             .slice(targetWordIndex, targetWordIndex + 1)
             .map((w, index) => renderWord(w, index, true))}
         </div>
-        <div className="gap-2">
+        <div className="gap-2 w-1/2 overflow-hidden">
           {words
             .slice(targetWordIndex + 1, targetWordIndex + WORDS_AHEAD + 1)
             .map((w, index) => renderWord(w, index, false))}
         </div>
       </div>
     );
-  };
+  }
 
   return (
     <div className="font-mono">
@@ -267,17 +395,31 @@ export function Typer({ words }: TyperProps) {
         </p>
       </div>
 
-      <input
-        autoFocus={true}
-        placeholder={stopped ? "..." : "Start typing ..."}
-        onKeyDown={keyDownListener}
-        onChange={onChange}
-        value={typedWord}
-        disabled={stopped}
-        className="bg-black disabled:text-slate-500 text-white outline-none border-slate-800 border-2 w-full p-4"
-      />
+      <div className="flex justify-center">
+        <input
+          autoFocus={true}
+          placeholder={isStopped() ? "..." : "Start typing ..."}
+          onKeyDown={keyDownListener}
+          onChange={onChange}
+          value={typedWord}
+          disabled={isStopped()}
+          className="bg-black disabled:text-slate-500 focus:border-transparent text-white outline-none border-slate-500 border-2 w-1/2 p-4"
+        />
+      </div>
 
-      <div className="flex p-10 justify-between">{renderStats()}</div>
+      <div className="p-10">
+        {state.history.length > 0 && (
+          <button
+            disabled={!isStopped()}
+            onClick={() => reset()}
+            className="disabled:text-slate-500 text-xs my-4 text-red-500 hover:text-white"
+          >
+            Try again?
+          </button>
+        )}
+
+        {renderHistory()}
+      </div>
     </div>
   );
 }

@@ -1,7 +1,10 @@
+export const SPACE = "␣";
+export const BACKSPACE = "⌫";
+
 export function mapKeyToChar(e: string) {
   switch (e) {
     case " ":
-      return "␣";
+      return SPACE;
     case "ArrowRight":
       return "→";
     case "ArrowLeft":
@@ -13,7 +16,7 @@ export function mapKeyToChar(e: string) {
     case "ArrowDown":
       return "↓";
     case "Backspace":
-      return "⌫";
+      return BACKSPACE;
     case "Meta":
     case "CapsLock":
     case "Escape":
