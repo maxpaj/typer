@@ -2,7 +2,7 @@ import { Typer } from "@/components/Typer";
 import words from "@/data/common";
 
 function randomizeWords() {
-  return new Array(100)
+  return new Array(500)
     .fill(0)
     .map((_) => Math.floor(Math.random() * words.length))
     .map((n) => words[n].toLowerCase());
