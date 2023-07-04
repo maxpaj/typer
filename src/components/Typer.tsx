@@ -322,6 +322,19 @@ export function Typer({ words }: TyperProps) {
 
       {renderWords()}
 
+      <div className="mb-5 flex justify-center">
+        <input
+          ref={inputRef}
+          autoFocus={true}
+          placeholder={isRunning() || isStopped() ? "" : "Start typing ..."}
+          onKeyDown={keyDownListener}
+          onChange={onChange}
+          value={typedWord}
+          disabled={isStopped()}
+          className="bg-inherit text-center disabled:text-slate-500 focus:border-transparent light:text-black dark:text-white outline-none border-slate-500 border-2 w-1/2 p-4"
+        />
+      </div>
+
       <div className="flex justify-between mb-4 gap-4">
         <p className="basis-0 flex-grow"></p>
 
@@ -330,19 +343,6 @@ export function Typer({ words }: TyperProps) {
         <p className="basis-0 flex-grow text-slate-500 border border-transparent text-sm">
           {(TIME_LIMIT - getElapsedMilliseconds() / 1000).toFixed(1)}s
         </p>
-      </div>
-
-      <div className="flex justify-center">
-        <input
-          ref={inputRef}
-          autoFocus={true}
-          placeholder={isRunning() ? "" : "Start typing ..."}
-          onKeyDown={keyDownListener}
-          onChange={onChange}
-          value={typedWord}
-          disabled={isStopped()}
-          className="bg-inherit text-center disabled:text-slate-500 focus:border-transparent light:text-black dark:text-white outline-none border-slate-500 border-2 w-1/2 p-4"
-        />
       </div>
 
       <div className="p-10">
