@@ -17,10 +17,10 @@ const FONT_SIZE =
         .map(parseInt)[0]
     : 10;
 
-const DEBUG =
+export const DEBUG =
   typeof window !== "undefined" && window.location.href.includes("localhost");
 
-const TIME_LIMIT = DEBUG ? 5 : 60;
+export const TIME_LIMIT = DEBUG ? 5 : 60;
 const CHAR_WIDTH = FONT_SIZE / 2;
 const START_WORD_INDEX = 10;
 const WORDS = 7;

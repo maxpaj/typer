@@ -1,9 +1,17 @@
+type Serie = {
+  label: string;
+  data: Point[];
+};
+
+type Point = {
+  x: number;
+  y: number;
+  label: string;
+};
+
 type ChartProps = {
-  data: {
-    x: number;
-    y: number;
-    label: string;
-  }[];
+  type: "line" | "point";
+  series: Serie[];
   width: number;
   height: number;
   xLabel: string;
@@ -11,21 +19,25 @@ type ChartProps = {
   padding: number;
 };
 
+const COLORS = ["red-500", "red-500", "red-500", "red-500", "red-500"];
+
 export function Chart({
-  data,
+  series,
   width,
   height,
   xLabel = "X",
   yLabel = "Y",
-  padding = 10,
+  type = "line",
+  padding = 1,
 }: ChartProps) {
+  const xMax = Math.max(...series.flatMap((s) => s.data).map((d) => d.x));
+  const yMax = Math.max(...series.flatMap((s) => s.data).map((d) => d.y));
+
   function getChartX(x: number) {
-    const xMax = getMax(data.map((d) => d.x));
     return (x / xMax) * width;
   }
 
   function getChartY(y: number) {
-    const yMax = getMax(data.map((d) => d.y));
     return height - (y / yMax) * height;
   }
 
@@ -41,43 +53,54 @@ export function Chart({
 
   return (
     <svg viewBox={`0 0 ${width} ${height}`}>
-      <g>
-        {data.map((d) => (
-          <>
-            <circle
-              className="stroke-red-500"
-              key={d.x + d.y}
-              cx={getChartX(d.x)}
-              cy={getChartY(d.y)}
-              r="0.25"
-            />
+      {series.map((serie, index) => {
+        const seriesColor = COLORS[index % COLORS.length];
 
-            <text
-              font-size=".15em"
-              className="font-mono fill-white"
-              x={getChartX(d.x) + 1}
-              y={getChartY(d.y) + 0.5}
-            >
-              {d.label}
-            </text>
-          </>
-        ))}
-      </g>
+        return (
+          <g key={serie.label}>
+            {serie.data.map((point, index) => (
+              <>
+                <text
+                  fontSize=".15em"
+                  className="font-mono fill-white"
+                  x={getChartX(point.x) + 1}
+                  y={getChartY(point.y) + 0.5}
+                >
+                  {point.label}
+                </text>
+
+                {type === "line" && index > 0 && (
+                  <line
+                    strokeWidth={0.1}
+                    className={`stroke-${seriesColor}`}
+                    x1={getChartX(point.x)}
+                    x2={getChartX(serie.data[index - 1].x)}
+                    y1={getChartY(point.y)}
+                    y2={getChartY(serie.data[index - 1].y)}
+                  />
+                )}
+              </>
+            ))}
+          </g>
+        );
+      })}
 
       <text
-        x={getChartX(1)}
-        y={getChartY(2)}
-        font-size=".15em"
+        x={1}
+        y={2}
+        textAnchor="start"
+        fontSize=".15em"
         className="font-mono fill-white"
       >
         {yLabel}
       </text>
 
       <text
-        x={getChartX(width - 2)}
-        y={getChartY(height - 1)}
+        x={width - 1}
+        y={height - 1}
         className="font-mono fill-white"
-        font-size=".15em"
+        fontSize=".15em"
+        textAnchor="end"
       >
         {xLabel}
       </text>
@@ -86,19 +109,8 @@ export function Chart({
         className="stroke-red-500 opacity-25 stroke-[0.5]"
         fill="rgb(239 68 68)"
       >
-        <line
-          x1={getChartX(0)}
-          x2={getChartX(width)}
-          y1={getChartY(0)}
-          y2={getChartY(0)}
-        />
-
-        <line
-          x1={getChartX(0)}
-          x2={getChartX(0)}
-          y1={getChartX(0)}
-          y2={getChartX(height)}
-        />
+        <line x1={0} x2={width} y1={height} y2={height} />
+        <line x1={0} x2={0} y1={0} y2={height} />
       </g>
     </svg>
   );
