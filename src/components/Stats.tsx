@@ -1,5 +1,5 @@
 import { Run } from "@/models/run";
-import { LineChart } from "./LineChart";
+import { Chart } from "./Chart";
 
 type StatsProps = {
   history: Run[];
@@ -14,7 +14,7 @@ export function Stats({ history }: StatsProps) {
 
     return (
       <>
-        <div key={run.startDate.toString()} className="mt-8 flex gap-x-4">
+        <div key={run.startDate.toString()} className="mt-8 mb-4 flex gap-x-4">
           <div className="w-1/4">
             <p>{run.timeLimitSeconds}s</p>
             <p>{run.correctWords.length} words</p>
@@ -50,14 +50,20 @@ export function Stats({ history }: StatsProps) {
           </div>
         </div>
 
-        <LineChart
-          height={100}
-          width={100}
-          data={run.correctWords.map((c) => ({
-            x: c.endTimestamp.getTime() - run.startDate.getTime(),
-            y: c.endTimestamp.getTime() - c.startTimestamp.getTime(),
-          }))}
-        />
+        {false && (
+          <Chart
+            height={25}
+            width={100}
+            data={run.correctWords.map((c) => ({
+              label: c.word,
+              x: c.endTimestamp.getTime() - run.startDate.getTime(),
+              y: c.endTimestamp.getTime() - c.startTimestamp.getTime(),
+            }))}
+            xLabel={"t"}
+            yLabel={"ms"}
+            padding={3}
+          />
+        )}
       </>
     );
   }
