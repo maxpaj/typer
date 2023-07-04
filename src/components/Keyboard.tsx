@@ -1,8 +1,12 @@
 type KeyboardLayoutProps = {
   highlight: string;
+  isCorrectChar: boolean;
 };
 
-export function KeyboardLayout({ highlight }: KeyboardLayoutProps) {
+export function KeyboardLayout({
+  highlight,
+  isCorrectChar = false,
+}: KeyboardLayoutProps) {
   const renderKeyboardCharacter = (
     char: string,
     highlight: string,
