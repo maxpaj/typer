@@ -64,23 +64,21 @@ export function Typer({ words }: TyperProps) {
     prevState: ReducerState,
     action: ReducerAction
   ): ReducerState {
+    debug(action.action);
+
     switch (action.action) {
       case "RESET":
-        debug("RESET");
-
         return {
           history: prevState.history,
           runningState: "RESET",
         };
       case "RUNNING":
-        debug("RUNNING");
         return {
           history: prevState.history,
           runningState: "RUNNING",
         };
 
       case "STOPPED":
-        debug("STOPPED");
         return {
           runningState: "STOPPED",
           history: [
