@@ -1,15 +1,10 @@
 import { Typer } from "@/components/Typer";
+import { randomizeWords } from "@/data/common";
 import words from "@/data/common";
 
-function randomizeWords() {
-  return new Array(500)
-    .fill(0)
-    .map((_) => Math.floor(Math.random() * words.length))
-    .map((n) => words[n].toLowerCase());
-}
-
 async function getData() {
-  return randomizeWords();
+  const seed = Math.floor(Math.random() * 1000);
+  return randomizeWords(words, seed);
 }
 
 export default async function Home() {

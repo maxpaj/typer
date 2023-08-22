@@ -1,3 +1,18 @@
+import { getRandomGenerator } from "@/lib/random";
+
+export function randomizeWords(
+  words: string[],
+  limit: number = 500,
+  seed: number = 1
+) {
+  const random = getRandomGenerator(seed);
+
+  return new Array(limit)
+    .fill(0)
+    .map((_) => Math.floor(random() * words.length))
+    .map((n) => words[n].toLowerCase());
+}
+
 const common = [
   "a",
   "able",

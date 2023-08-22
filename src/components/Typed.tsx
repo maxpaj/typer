@@ -1,3 +1,5 @@
+"use client";
+
 type TypedProps = { typedRaw: string };
 
 export function Typed({ typedRaw }: TypedProps) {

@@ -1,6 +1,9 @@
+"use client";
+
 import { Run } from "@/models/run";
-import { Chart } from "./Chart";
-import { DEBUG } from "./Typer";
+import { Chart, Point, Serie } from "./chart/Chart";
+import { getSlots } from "@/lib/stats/type-speed";
+import { addSeconds } from "@/lib/date/date";
 
 type StatsProps = {
   history: Run[];
@@ -12,6 +15,18 @@ export function Stats({ history }: StatsProps) {
       (sum, c) => c.word.length + sum,
       0
     );
+
+    const errors = run.correctWords.reduce((sum, curr) => sum + curr.errors, 0);
+    const worst = run.correctWords.reduce((maxErrorsWord, currentWord) => {
+      if (currentWord.errors > maxErrorsWord.errors) {
+        return currentWord;
+      }
+
+      return maxErrorsWord;
+    }, run.correctWords[0]).word;
+
+    const accuracy =
+      (100 * correctWordsTotalLength) / (correctWordsTotalLength + errors);
 
     return (
       <>
@@ -27,24 +42,30 @@ export function Stats({ history }: StatsProps) {
             </p>
 
             <p className="mt-2">{correctWordsTotalLength} chars</p>
-            <p>{run.errors.toFixed(0)} errors</p>
-            <p>
-              {(
-                (100 * correctWordsTotalLength) /
-                (correctWordsTotalLength + run.errors)
-              ).toFixed(0)}
-              % accuracy
-            </p>
+            <p>{errors.toFixed(0)} errors</p>
+            <p>{accuracy.toFixed(0)}% accuracy</p>
           </div>
 
-          <div className="w-3/4 text-slate-400 flex flex-wrap content-baseline gap-x-1">
-            {run.correctWords.map((c) => {
+          <div className="w-3/4 flex flex-wrap content-baseline gap-x-1">
+            {run.correctWords.map((c, index) => {
+              const previousWordTimestamp = run.correctWords[index - 1]
+                ? run.correctWords[index - 1].endTimestamp
+                : run.startDate;
+
               const timeMillis =
-                c.endTimestamp.getTime() - c.startTimestamp.getTime();
+                c.endTimestamp.getTime() - previousWordTimestamp.getTime();
+
+              const className =
+                worst === c.word ? "text-red-400" : "text-slate-400";
 
               return (
-                <div style={{ flex: "0 0 160px" }} key={c.word + timeMillis}>
-                  {c.word} ({timeMillis}ms)
+                <div
+                  style={{ flex: "0 0 160px" }}
+                  className={className}
+                  key={c.word + timeMillis}
+                >
+                  {c.word} ({timeMillis} ms
+                  {worst === c.word ? `, ${c.errors} errors` : ``}){" "}
                 </div>
               );
             })}
@@ -53,17 +74,23 @@ export function Stats({ history }: StatsProps) {
 
         {false && (
           <Chart
-            type="point"
+            type="line"
             height={25}
             width={100}
             series={[
               {
                 label: "",
-                data: run.correctWords.map((c) => ({
-                  label: c.word,
-                  x: c.endTimestamp.getTime() - run.startDate.getTime(),
-                  y: c.endTimestamp.getTime() - c.startTimestamp.getTime(),
-                })),
+                data: run.correctWords.map((c, index) => {
+                  const previousWordTimestamp = run.correctWords[index - 1]
+                    ? run.correctWords[index - 1].endTimestamp.getTime()
+                    : run.startDate.getTime();
+
+                  return {
+                    label: c.word,
+                    x: c.endTimestamp.getTime() - run.startDate.getTime(),
+                    y: c.endTimestamp.getTime() - previousWordTimestamp,
+                  };
+                }),
               },
             ]}
             xLabel={"t"}
@@ -75,7 +102,7 @@ export function Stats({ history }: StatsProps) {
     );
   }
 
-  const countSeries = history.map((run) => {
+  const countSeries: Serie[] = history.map((run) => {
     return {
       label: run.startDate.getTime().toString(),
       data: run.correctWords.reduce(
@@ -95,24 +122,58 @@ export function Stats({ history }: StatsProps) {
             x: 0,
             y: 0,
           },
-        ] as { x: number; y: number; label: string }[]
+        ] as Point[]
       ),
+    };
+  });
+
+  const wpmSeries: Serie[] = history.map((run) => {
+    const slots = getSlots(
+      run.correctWords.map((c) => c.endTimestamp),
+      run.startDate,
+      addSeconds(run.startDate, run.timeLimitSeconds),
+      5
+    );
+
+    return {
+      label: run.startDate.getTime().toString(),
+      data: slots.map((s, index) => ({
+        x: index,
+        y: s,
+        label: `${s} wpm`,
+      })),
     };
   });
 
   return (
     <>
-      {DEBUG && (
+      {
         <Chart
+          className="mb-2"
           type="line"
           height={25}
           width={100}
-          series={countSeries}
+          series={wpmSeries}
+          renderPointLabel={(p) => (
+            <text>
+              {p.x} {p.y}
+            </text>
+          )}
           xLabel={"t"}
-          yLabel={"w"}
+          yLabel={"wpm"}
           padding={5}
         />
-      )}
+      }
+
+      <Chart
+        type="line"
+        height={25}
+        width={100}
+        series={countSeries}
+        xLabel={"t"}
+        yLabel={"w"}
+        padding={5}
+      />
 
       {history
         .sort((a, b) => b.startDate.getTime() - a.startDate.getTime())
