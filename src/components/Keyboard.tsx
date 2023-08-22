@@ -1,3 +1,5 @@
+"use client";
+
 type KeyboardLayoutProps = {
   highlight: string;
   isCorrectChar: boolean;

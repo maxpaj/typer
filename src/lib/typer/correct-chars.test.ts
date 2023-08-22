@@ -1,4 +1,4 @@
-import { incorrectCharacterIndex, lastCorrectIndex } from "./words";
+import { incorrectCharacterIndex, lastCorrectIndex } from "./correct-chars";
 import { describe, expect, test } from "@jest/globals";
 
 describe("incorrectCharacterIndex", () => {

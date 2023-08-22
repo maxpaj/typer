@@ -1,12 +1,16 @@
 "use client";
 
 import { KeyboardEvent, useReducer, useRef, useState } from "react";
-import { incorrectCharacterIndex, lastCorrectIndex } from "@/lib/words";
-import { BACKSPACE, mapKeyToChar } from "@/lib/key-to-char";
-import { sleepStep } from "@/lib/sleep";
+import { sleepStep } from "@/lib/sleep/sleep";
 import { CompletedWord, Run } from "@/models/run";
 import { Stats } from "./Stats";
 import { KeyboardLayout } from "./Keyboard";
+import { getMockHistory } from "@/data/mockState";
+import { BACKSPACE, mapKeyToChar } from "@/lib/typer/key-to-char";
+import {
+  incorrectCharacterIndex,
+  lastCorrectIndex,
+} from "@/lib/typer/correct-chars";
 
 const FONT_SIZE =
   typeof window !== "undefined"
@@ -20,7 +24,7 @@ const FONT_SIZE =
 export const DEBUG =
   typeof window !== "undefined" && window.location.href.includes("localhost");
 
-export const TIME_LIMIT = DEBUG ? 5 : 60;
+export const TIME_LIMIT = DEBUG ? 30 : 60;
 const CHAR_WIDTH = FONT_SIZE / 2;
 const START_WORD_INDEX = 10;
 const WORDS = 7;
@@ -35,7 +39,7 @@ type RunningState = "RESET" | "RUNNING" | "STOPPED";
 
 type ReducerState = {
   runningState: RunningState;
-  history: Run[];
+  completedRuns: Run[];
 };
 
 type ReducerAction = { action: RunningState };
@@ -45,62 +49,60 @@ export function Typer({ words }: TyperProps) {
   const [typedRaw, setTypedRaw] = useState("");
   const [typedWord, setTypedWord] = useState("");
   const [timeStep, setStepTime] = useState(new Date());
-  const [targetWordIndex, setTargetWordIndex] = useState(START_WORD_INDEX);
-  const [wordStartTimestamp, setWordStartTimestamp] = useState(new Date());
   const [runStartDate, setRunStartDate] = useState<Date | undefined>(undefined);
 
-  const [runErrors, setRunErrors] = useState(0);
+  const [currentWordIndex, setCurrentWordIndex] = useState(START_WORD_INDEX);
+  const [currentWordErrors, setCurrentWordErrors] = useState(0);
+
   const [runCorrectWords, setRunCorrectWords] = useState<CompletedWord[]>([]);
 
-  const [state, dispatch] = useReducer(reducer, {
+  const [typerState, dispatchTyperState] = useReducer(stateReducer, {
     runningState: "RESET",
-    history: [],
+    completedRuns: getMockHistory(),
   });
 
-  const targetWord = words[targetWordIndex];
+  const targetWord = words[currentWordIndex];
   const incorrectCharIndex = incorrectCharacterIndex(typedWord, targetWord);
 
-  function reducer(
+  function stateReducer(
     prevState: ReducerState,
     action: ReducerAction
   ): ReducerState {
+    debug(action.action);
+
     switch (action.action) {
       case "RESET":
-        debug("RESET");
-
         return {
-          history: prevState.history,
+          completedRuns: prevState.completedRuns,
           runningState: "RESET",
         };
       case "RUNNING":
-        debug("RUNNING");
         return {
-          history: prevState.history,
+          completedRuns: prevState.completedRuns,
           runningState: "RUNNING",
         };
 
       case "STOPPED":
-        debug("STOPPED");
+        const newHistoryState: Run[] = [
+          ...prevState.completedRuns,
+          {
+            correctWords: runCorrectWords,
+            startDate: runStartDate!,
+            timeLimitSeconds: TIME_LIMIT,
+          },
+        ];
+
         return {
           runningState: "STOPPED",
-          history: [
-            ...prevState.history,
-            {
-              correctWords: runCorrectWords,
-              errors: runErrors,
-              startDate: runStartDate!,
-              timeLimitSeconds: TIME_LIMIT,
-            },
-          ],
+          completedRuns: newHistoryState,
         };
     }
   }
 
   function reset() {
-    dispatch({ action: "RESET" });
+    dispatchTyperState({ action: "RESET" });
     setTypedWord(() => "");
     setRunCorrectWords([]);
-    setRunErrors(0);
     setRunStartDate(undefined);
     setTimeout(() => {
       if (inputRef.current) inputRef.current.focus();
@@ -121,7 +123,7 @@ export function Typer({ words }: TyperProps) {
       lastCorrectIndex(typedWord + char, targetWord) === typedWord.length;
 
     if (char !== BACKSPACE && !correctChar) {
-      setRunErrors(() => runErrors + 1);
+      setCurrentWordErrors(() => currentWordErrors + 1);
     }
 
     switch (e.key) {
@@ -133,15 +135,15 @@ export function Typer({ words }: TyperProps) {
       case "Shift":
       case " ":
         if (correctWord) {
-          setTargetWordIndex(() => targetWordIndex + 1);
+          setCurrentWordIndex(() => currentWordIndex + 1);
           setTypedWord(() => "");
-          setWordStartTimestamp(() => new Date());
+          setCurrentWordErrors(() => 0);
           setRunCorrectWords(() => [
             ...runCorrectWords,
             {
+              errors: currentWordErrors,
               word: targetWord,
               endTimestamp: new Date(),
-              startTimestamp: wordStartTimestamp!,
             },
           ]);
         }
@@ -150,11 +152,11 @@ export function Typer({ words }: TyperProps) {
   }
 
   function isStopped() {
-    return state.runningState === "STOPPED";
+    return typerState.runningState === "STOPPED";
   }
 
   function isRunning() {
-    return state.runningState === "RUNNING";
+    return typerState.runningState === "RUNNING";
   }
 
   function shouldClearInput(e: React.ChangeEvent<HTMLInputElement>) {
@@ -166,23 +168,22 @@ export function Typer({ words }: TyperProps) {
     debug("RUNNING");
     const start = new Date();
     setRunStartDate(() => start);
-    setWordStartTimestamp(() => new Date());
 
-    dispatch({ action: "RUNNING" });
+    dispatchTyperState({ action: "RUNNING" });
     await sleepStep(TIME_LIMIT * 1000, 50, () => {
       setStepTime(() => new Date());
     });
 
-    dispatch({ action: "STOPPED" });
+    dispatchTyperState({ action: "STOPPED" });
     await sleepStep(3000, 100, () => {});
 
     reset();
   }
 
-  function debug(state: string) {
-    console.log(state, {
+  function debug(s: string) {
+    console.log(s, {
       correctWords: runCorrectWords,
-      errors: runErrors,
+      errors: currentWordErrors,
       startDate: runStartDate,
       time: timeStep,
     });
@@ -205,7 +206,10 @@ export function Typer({ words }: TyperProps) {
   }
 
   function getElapsedMilliseconds() {
-    if (state.runningState === "STOPPED" || state.runningState === "RESET") {
+    if (
+      typerState.runningState === "STOPPED" ||
+      typerState.runningState === "RESET"
+    ) {
       return TIME_LIMIT * 1000;
     }
 
@@ -217,11 +221,11 @@ export function Typer({ words }: TyperProps) {
   }
 
   function getScrollX() {
-    const characters = words.slice(0, targetWordIndex).reduce((sum, curr) => {
+    const characters = words.slice(0, currentWordIndex).reduce((sum, curr) => {
       return sum + curr.length;
     }, 0);
     const textWidth = characters * CHAR_WIDTH;
-    const spacesWidth = targetWordIndex * CHAR_WIDTH;
+    const spacesWidth = currentWordIndex * CHAR_WIDTH;
     const scrollX = -1 * (textWidth + spacesWidth);
     return scrollX;
   }
@@ -250,7 +254,7 @@ export function Typer({ words }: TyperProps) {
             return (
               <span
                 key={targetWord + char + index}
-                className="font-bold text-green-400 [text-shadow:_0px_1px_2px_rgb(0_255_0_/_90%)] decoration-green-400 underline"
+                className="font-bold text-green-400 [text-shadow:_0px_1px_2px_rgb(0_255_0_/_90%)] decoration-green-400"
               >
                 {char}
               </span>
@@ -261,7 +265,7 @@ export function Typer({ words }: TyperProps) {
             return (
               <span
                 key={targetWord + char + index}
-                className="font-bold text-red-400 [text-shadow:_0px_1px_2px_rgb(255_0_0_/_90%)] decoration-red-400 underline"
+                className="font-bold text-red-400 [text-shadow:_0px_1px_2px_rgb(255_0_0_/_90%)] decoration-red-400"
               >
                 {char}
               </span>
@@ -279,8 +283,15 @@ export function Typer({ words }: TyperProps) {
   }
 
   function renderWord(word: string, wordIndex: number) {
+    const fontSize = (1.5 * wordIndex) / WORDS_AHEAD;
+    const style = {}; // { fontSize: `${fontSize}em` };
+
     return (
-      <span key={word + wordIndex} className="font-thin text-slate-600">
+      <span
+        key={word + wordIndex}
+        className="font-thin text-slate-600"
+        style={style}
+      >
         {word}
       </span>
     );
@@ -289,8 +300,8 @@ export function Typer({ words }: TyperProps) {
   function renderDebug() {
     return (
       <div>
-        <p>{state.runningState}</p>
-        <p>{state.history.length} runs</p>
+        <p>{typerState.runningState}</p>
+        <p>{typerState.completedRuns.length} runs</p>
       </div>
     );
   }
@@ -302,14 +313,16 @@ export function Typer({ words }: TyperProps) {
       <div className="mb-5 words-container">
         <div className="words-container-left gap-2 w-1/2 overflow-hidden">
           {words
-            .slice(targetWordIndex - WORDS_BEHIND, targetWordIndex)
+            .slice(currentWordIndex - WORDS_BEHIND, currentWordIndex)
             .map((w, index) => renderWord(w, index))}
         </div>
-        <div className="words-container-center mx-2">{renderCurrentWord()}</div>
+        <div className="words-container-center mx-2 text-xl">
+          {renderCurrentWord()}
+        </div>
         <div className="words-container-right gap-2 w-1/2 overflow-hidden">
           {words
-            .slice(targetWordIndex + 1, targetWordIndex + WORDS_AHEAD + 1)
-            .map((w, index) => renderWord(w, index))}
+            .slice(currentWordIndex + 1, currentWordIndex + WORDS_AHEAD + 1)
+            .map((w, index) => renderWord(w, WORDS_AHEAD - index - 1))}
         </div>
       </div>
     );
@@ -351,10 +364,10 @@ export function Typer({ words }: TyperProps) {
       <div className="p-10">
         <div
           className={
-            state.runningState === "RUNNING" ? "opacity-20" : "opacity-100"
+            typerState.runningState === "RUNNING" ? "opacity-20" : "opacity-100"
           }
         >
-          <Stats history={state.history} />
+          <Stats history={typerState.completedRuns} />
         </div>
       </div>
     </div>
