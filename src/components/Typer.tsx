@@ -1,12 +1,12 @@
 "use client";
 
-import { KeyboardEvent, useReducer, useRef, useState } from "react";
-import { incorrectCharacterIndex, lastCorrectIndex } from "@/lib/words";
 import { BACKSPACE, mapKeyToChar } from "@/lib/key-to-char";
 import { sleepStep } from "@/lib/sleep";
+import { incorrectCharacterIndex, lastCorrectIndex } from "@/lib/words";
 import { CompletedWord, Run } from "@/models/run";
-import { Stats } from "./Stats";
+import { KeyboardEvent, useReducer, useRef, useState } from "react";
 import { KeyboardLayout } from "./Keyboard";
+import { Stats } from "./Stats";
 
 const FONT_SIZE =
   typeof window !== "undefined"
@@ -57,8 +57,12 @@ export function Typer({ words }: TyperProps) {
     history: [],
   });
 
+  const typedWordLower = typedWord.toLowerCase();
   const targetWord = words[targetWordIndex];
-  const incorrectCharIndex = incorrectCharacterIndex(typedWord, targetWord);
+  const incorrectCharIndex = incorrectCharacterIndex(
+    typedWordLower,
+    targetWord
+  );
 
   function reducer(
     prevState: ReducerState,
@@ -116,7 +120,8 @@ export function Typer({ words }: TyperProps) {
 
     const correctWord = incorrectCharIndex === -1;
     const correctChar =
-      lastCorrectIndex(typedWord + char, targetWord) === typedWord.length;
+      lastCorrectIndex(typedWordLower + char, targetWord) ===
+      typedWordLower.length;
 
     if (char !== BACKSPACE && !correctChar) {
       setRunErrors(() => runErrors + 1);
@@ -248,7 +253,7 @@ export function Typer({ words }: TyperProps) {
             return (
               <span
                 key={targetWord + char + index}
-                className="font-bold text-green-400 [text-shadow:_0px_1px_2px_rgb(0_255_0_/_90%)] decoration-green-400 underline"
+                className="font-bold text-green-400 [text-shadow:_0px_1px_2px_rgb(0_255_0_/_90%)] decoration-green-400"
               >
                 {char}
               </span>
@@ -298,13 +303,13 @@ export function Typer({ words }: TyperProps) {
 
     return (
       <div className="mb-5 words-container">
-        <div className="words-container-left gap-2 w-1/2 overflow-hidden">
+        <div className="words-container-left gap-4 w-1/2 overflow-hidden">
           {words
             .slice(targetWordIndex - WORDS_BEHIND, targetWordIndex)
             .map((w, index) => renderWord(w, index))}
         </div>
-        <div className="words-container-center mx-2">{renderCurrentWord()}</div>
-        <div className="words-container-right gap-2 w-1/2 overflow-hidden">
+        <div className="words-container-center mx-4">{renderCurrentWord()}</div>
+        <div className="words-container-right gap-4 w-1/2 overflow-hidden">
           {words
             .slice(targetWordIndex + 1, targetWordIndex + WORDS_AHEAD + 1)
             .map((w, index) => renderWord(w, index))}

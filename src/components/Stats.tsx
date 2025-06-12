@@ -1,6 +1,4 @@
 import { Run } from "@/models/run";
-import { Chart } from "./Chart";
-import { DEBUG } from "./Typer";
 
 type StatsProps = {
   history: Run[];
@@ -50,27 +48,6 @@ export function Stats({ history }: StatsProps) {
             })}
           </div>
         </div>
-
-        {false && (
-          <Chart
-            type="point"
-            height={25}
-            width={100}
-            series={[
-              {
-                label: "",
-                data: run.correctWords.map((c) => ({
-                  label: c.word,
-                  x: c.endTimestamp.getTime() - run.startDate.getTime(),
-                  y: c.endTimestamp.getTime() - c.startTimestamp.getTime(),
-                })),
-              },
-            ]}
-            xLabel={"t"}
-            yLabel={"ms"}
-            padding={3}
-          />
-        )}
       </>
     );
   }
@@ -102,18 +79,6 @@ export function Stats({ history }: StatsProps) {
 
   return (
     <>
-      {DEBUG && (
-        <Chart
-          type="line"
-          height={25}
-          width={100}
-          series={countSeries}
-          xLabel={"t"}
-          yLabel={"w"}
-          padding={5}
-        />
-      )}
-
       {history
         .sort((a, b) => b.startDate.getTime() - a.startDate.getTime())
         .map(renderRun)}
